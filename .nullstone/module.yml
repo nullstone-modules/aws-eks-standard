@@ -1,0 +1,16 @@
+org_name: nullstone
+name: aws-eks-standard
+friendly_name: Kubernetes Cluster (Standard Mode)
+description: Creates a Kubernetes cluster in Standard mode that uses EKS managed node groups.
+category: cluster
+subcategory: ""
+provider_types:
+    - aws
+platform: k8s
+subplatform: eks
+type: ""
+appCategories: []
+is_public: true
+tool_name: opentofu
+include: []
+source_url: https://github.com/nullstone-modules/aws-eks-standard
