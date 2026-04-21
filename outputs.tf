@@ -1,3 +1,8 @@
+output "region" {
+  value       = local.region
+  description = "string ||| The region where the EKS cluster resides."
+}
+
 output "cluster_logs_group" {
   value       = module.logs.name
   description = "string ||| The name of the Cloudwatch log group containing EKS Control Plane logs."
