@@ -80,6 +80,15 @@ resource "aws_eks_addon" "secrets_store_csi_aws_provider" {
   resolve_conflicts_on_update = "PRESERVE"
   tags                        = local.tags
 
+  configuration_values = jsonencode({
+    "secrets-store-csi-driver" = {
+      enableSecretRotation = true
+      syncSecret = {
+        enabled = true
+      }
+    }
+  })
+
   timeouts {
     create = "30m"
   }
