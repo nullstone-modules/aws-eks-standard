@@ -19,6 +19,12 @@ resource "aws_eks_addon" "vpc_cni" {
   resolve_conflicts_on_update = "PRESERVE"
   tags                        = local.tags
 
+  configuration_values = jsonencode({
+    env = {
+      ENABLE_POD_ENI = "true"
+    }
+  })
+
   timeouts {
     create = "30m"
   }
