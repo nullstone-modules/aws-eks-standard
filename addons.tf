@@ -242,6 +242,16 @@ resource "aws_eks_addon" "cloudwatch_observability" {
   service_account_role_arn    = aws_iam_role.cloudwatch_observability.arn
   tags                        = local.tags
 
+  configuration_values = jsonencode({
+    "manager" = {
+      applicationSignals = {
+        autoMonitor = {
+          monitorAllServices = false
+        }
+      }
+    }
+  })
+
   timeouts {
     create = "30m"
   }
