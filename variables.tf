@@ -88,3 +88,12 @@ AMI type for the managed node group.
 Valid values: AL2023_x86_64_STANDARD, AL2023_ARM_64_STANDARD, AL2_x86_64, AL2_ARM_64, BOTTLEROCKET_x86_64, BOTTLEROCKET_ARM_64.
 EOF
 }
+
+variable "enable_aws_load_balancer_controller" {
+  type        = bool
+  default     = true
+  description = <<EOF
+Whether to install the AWS Load Balancer Controller EKS addon.
+When enabled, provisions the IAM role/policy, Pod Identity association, and addon required to manage ALBs/NLBs from Kubernetes Ingress and Service resources.
+EOF
+}
