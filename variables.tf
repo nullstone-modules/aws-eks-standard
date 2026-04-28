@@ -89,11 +89,52 @@ Valid values: AL2023_x86_64_STANDARD, AL2023_ARM_64_STANDARD, AL2_x86_64, AL2_AR
 EOF
 }
 
-variable "enable_aws_load_balancer_controller" {
-  type        = bool
-  default     = true
+variable "enabled_addons" {
+  type = list(string)
+  default = [
+    "eks-pod-identity-agent",
+    "vpc-cni",
+    "kube-proxy",
+    "coredns",
+    "eks-node-monitoring-agent",
+    "aws-guardduty-agent",
+    "aws-secrets-store-csi-driver-provider",
+    "aws-efs-csi-driver",
+    "aws-ebs-csi-driver",
+    "amazon-cloudwatch-observability",
+    "aws-load-balancer-controller",
+  ]
   description = <<EOF
-Whether to install the AWS Load Balancer Controller EKS addon.
-When enabled, provisions the IAM role/policy, Pod Identity association, and addon required to manage ALBs/NLBs from Kubernetes Ingress and Service resources.
+List of EKS addons to install on the cluster. Any IAM roles, policies, and Pod Identity associations required by an addon are provisioned only when that addon is included.
+
+Supported addon names (these are the only values accepted; the list is the full set of addons this module knows how to install):
+  - eks-pod-identity-agent                   Required by aws-load-balancer-controller (Pod Identity).
+  - vpc-cni                                  Pod networking. Required by coredns.
+  - kube-proxy                               kube-proxy daemonset.
+  - coredns                                  Cluster DNS. Requires vpc-cni and a running node group.
+  - eks-node-monitoring-agent                EKS node health monitoring.
+  - aws-guardduty-agent                      GuardDuty runtime monitoring.
+  - aws-secrets-store-csi-driver-provider    Secrets Store CSI driver + AWS provider.
+  - aws-efs-csi-driver                       EFS CSI driver (provisions an IAM role via IRSA).
+  - aws-ebs-csi-driver                       EBS CSI driver (provisions an IAM role via IRSA).
+  - amazon-cloudwatch-observability          CloudWatch agent + Container Insights (provisions an IAM role via IRSA).
+  - aws-load-balancer-controller             ALB/NLB controller for Ingress and Service type=LoadBalancer (provisions an IAM role via Pod Identity).
 EOF
+
+  validation {
+    condition = length(setsubtract(toset(var.enabled_addons), toset([
+      "eks-pod-identity-agent",
+      "vpc-cni",
+      "kube-proxy",
+      "coredns",
+      "eks-node-monitoring-agent",
+      "aws-guardduty-agent",
+      "aws-secrets-store-csi-driver-provider",
+      "aws-efs-csi-driver",
+      "aws-ebs-csi-driver",
+      "amazon-cloudwatch-observability",
+      "aws-load-balancer-controller",
+    ]))) == 0
+    error_message = "enabled_addons contains an unsupported addon name. See the variable description for the full list of supported addons."
+  }
 }

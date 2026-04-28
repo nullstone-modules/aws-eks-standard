@@ -3,7 +3,7 @@
 # -----------------------------------------------
 
 resource "aws_iam_role" "aws_load_balancer_controller" {
-  count              = var.enable_aws_load_balancer_controller ? 1 : 0
+  count              = contains(local.enabled_addons, "aws-load-balancer-controller") ? 1 : 0
   name               = "${local.resource_name}-aws-lbc"
   assume_role_policy = data.aws_iam_policy_document.aws_load_balancer_controller_assume.json
   tags               = local.tags
@@ -22,20 +22,20 @@ data "aws_iam_policy_document" "aws_load_balancer_controller_assume" {
 }
 
 resource "aws_iam_policy" "aws_load_balancer_controller" {
-  count  = var.enable_aws_load_balancer_controller ? 1 : 0
+  count  = contains(local.enabled_addons, "aws-load-balancer-controller") ? 1 : 0
   name   = "${local.resource_name}-aws-lbc"
   policy = data.aws_iam_policy_document.aws_load_balancer_controller.json
   tags   = local.tags
 }
 
 resource "aws_iam_role_policy_attachment" "aws_load_balancer_controller" {
-  count      = var.enable_aws_load_balancer_controller ? 1 : 0
+  count      = contains(local.enabled_addons, "aws-load-balancer-controller") ? 1 : 0
   role       = aws_iam_role.aws_load_balancer_controller[0].name
   policy_arn = aws_iam_policy.aws_load_balancer_controller[0].arn
 }
 
 resource "aws_eks_pod_identity_association" "aws_load_balancer_controller" {
-  count           = var.enable_aws_load_balancer_controller ? 1 : 0
+  count           = contains(local.enabled_addons, "aws-load-balancer-controller") ? 1 : 0
   cluster_name    = aws_eks_cluster.this.name
   namespace       = "kube-system"
   service_account = "aws-load-balancer-controller"
@@ -44,7 +44,7 @@ resource "aws_eks_pod_identity_association" "aws_load_balancer_controller" {
 }
 
 resource "aws_eks_addon" "aws_load_balancer_controller" {
-  count                       = var.enable_aws_load_balancer_controller ? 1 : 0
+  count                       = contains(local.enabled_addons, "aws-load-balancer-controller") ? 1 : 0
   cluster_name                = aws_eks_cluster.this.name
   addon_name                  = "aws-load-balancer-controller"
   resolve_conflicts_on_update = "PRESERVE"
