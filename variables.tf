@@ -102,13 +102,12 @@ variable "enabled_addons" {
     "aws-efs-csi-driver",
     "aws-ebs-csi-driver",
     "amazon-cloudwatch-observability",
-    "aws-load-balancer-controller",
   ]
   description = <<EOF
 List of EKS addons to install on the cluster. Any IAM roles, policies, and Pod Identity associations required by an addon are provisioned only when that addon is included.
 
 Supported addon names (these are the only values accepted; the list is the full set of addons this module knows how to install):
-  - eks-pod-identity-agent                   Required by aws-load-balancer-controller (Pod Identity).
+  - eks-pod-identity-agent                   Pod Identity agent for IAM-roles-for-service-accounts via Pod Identity.
   - vpc-cni                                  Pod networking. Required by coredns.
   - kube-proxy                               kube-proxy daemonset.
   - coredns                                  Cluster DNS. Requires vpc-cni and a running node group.
@@ -118,7 +117,6 @@ Supported addon names (these are the only values accepted; the list is the full 
   - aws-efs-csi-driver                       EFS CSI driver (provisions an IAM role via IRSA).
   - aws-ebs-csi-driver                       EBS CSI driver (provisions an IAM role via IRSA).
   - amazon-cloudwatch-observability          CloudWatch agent + Container Insights (provisions an IAM role via IRSA).
-  - aws-load-balancer-controller             ALB/NLB controller for Ingress and Service type=LoadBalancer (provisions an IAM role via Pod Identity).
 EOF
 
   validation {
@@ -133,7 +131,6 @@ EOF
       "aws-efs-csi-driver",
       "aws-ebs-csi-driver",
       "amazon-cloudwatch-observability",
-      "aws-load-balancer-controller",
     ]))) == 0
     error_message = "enabled_addons contains an unsupported addon name. See the variable description for the full list of supported addons."
   }
