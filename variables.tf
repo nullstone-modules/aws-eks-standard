@@ -135,3 +135,9 @@ EOF
     error_message = "enabled_addons contains an unsupported addon name. See the variable description for the full list of supported addons."
   }
 }
+
+variable "cert_manager_chart_version" {
+  type        = string
+  default     = "v1.16.2"
+  description = "The version of the cert-manager Helm chart (https://charts.jetstack.io) to install. cert-manager is required by webhook-based operators such as the ADOT operator."
+}

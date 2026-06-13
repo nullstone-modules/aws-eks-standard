@@ -26,3 +26,7 @@ The following EKS addons are installed by default with every cluster.
 
 - **CloudWatch Observability** (`amazon-cloudwatch-observability`) — Collects and ships container logs, metrics, and traces to Amazon CloudWatch. Provides out-of-the-box dashboards for cluster and workload monitoring.
 - **Node Monitoring Agent** (`amazon-eks-node-monitoring-agent`) — Monitors node-level health and reports issues back to the EKS control plane. Helps surface node problems (disk pressure, network issues, etc.) as Kubernetes node conditions.
+
+### Certificates
+
+- **cert-manager** — Installed by default via Helm (not an EKS managed addon). Issues and renews TLS certificates inside the cluster, and is the prerequisite for webhook-based operators such as the AWS Distro for OpenTelemetry (ADOT) operator used by the `aws-eks-otel-adot` module.
