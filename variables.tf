@@ -143,14 +143,85 @@ When true, EKS evicts those pods anyway to complete the rollout.
 EOF
 }
 
-variable "node_auto_repair_enabled" {
-  type        = bool
-  default     = true
+variable "node_auto_repair" {
+  type = object({
+    enabled                  = optional(bool, true)
+    max_parallel_count       = optional(number)
+    max_parallel_percentage  = optional(number)
+    max_unhealthy_count      = optional(number)
+    max_unhealthy_percentage = optional(number)
+    overrides = optional(list(object({
+      node_monitoring_condition = string
+      node_unhealthy_reason     = string
+      min_repair_wait_time_mins = number
+      repair_action             = string
+    })), [])
+  })
+  default     = {}
   description = <<EOF
-Enables EKS node auto repair for the managed node group.
-When a node is reported unhealthy for a sustained period, EKS automatically replaces it without manual intervention.
+Configures EKS node auto repair for the managed node group.
+When a node is reported unhealthy for a sustained period, EKS replaces or reboots it without manual intervention.
 This requires the 'eks-node-monitoring-agent' addon, which detects and reports the node conditions that trigger a repair.
+
+  enabled                     Whether node auto repair is enabled. Defaults to true.
+  max_parallel_count          Maximum number of nodes repaired concurrently. Defaults to 1, matching EKS.
+  max_parallel_percentage     Maximum percentage of unhealthy nodes repaired concurrently (0-100).
+  max_unhealthy_count         Number of unhealthy nodes above which auto repair stops acting. Defaults to 5, matching EKS.
+  max_unhealthy_percentage    Percentage of unhealthy nodes above which auto repair stops acting (0-100).
+  overrides                   Per-condition repair actions and wait times. See below.
+
+The max_unhealthy_* setting is a safety brake: during a cluster-wide incident it stops auto repair from cycling the entire node group. In-progress repairs still finish.
+Each pair is mutually exclusive. Set the count or the percentage, never both, and omit both to keep the value EKS applies server-side.
+
+Each entry in overrides replaces the default repair action and wait time for a single node health issue:
+
+  node_monitoring_condition   Condition reported by the node monitoring agent, e.g. AcceleratedHardwareReady, ContainerRuntimeReady, KernelReady, NetworkingReady, StorageReady, Ready.
+  node_unhealthy_reason       Reason code for the condition, e.g. NvidiaXID31Error, IPAMDNotRunning.
+  min_repair_wait_time_mins   How long the condition must persist before the node is eligible for repair. Use this to avoid repairing transient issues.
+  repair_action               Replace (terminate and replace the node), Reboot (reboot in place), or NoAction (never repair this condition).
+
+Without an override, EKS replaces after 30m for most conditions, and replaces or reboots after 10m for AcceleratedHardwareReady.
 EOF
+
+  validation {
+    condition     = var.node_auto_repair.max_parallel_count == null || var.node_auto_repair.max_parallel_percentage == null
+    error_message = "node_auto_repair may set max_parallel_count or max_parallel_percentage, not both."
+  }
+
+  validation {
+    condition     = var.node_auto_repair.max_unhealthy_count == null || var.node_auto_repair.max_unhealthy_percentage == null
+    error_message = "node_auto_repair may set max_unhealthy_count or max_unhealthy_percentage, not both."
+  }
+
+  validation {
+    condition     = var.node_auto_repair.max_parallel_count == null || var.node_auto_repair.max_parallel_count >= 1
+    error_message = "node_auto_repair.max_parallel_count must be at least 1."
+  }
+
+  validation {
+    condition     = var.node_auto_repair.max_unhealthy_count == null || var.node_auto_repair.max_unhealthy_count >= 1
+    error_message = "node_auto_repair.max_unhealthy_count must be at least 1."
+  }
+
+  validation {
+    condition     = var.node_auto_repair.max_parallel_percentage == null || (var.node_auto_repair.max_parallel_percentage >= 0 && var.node_auto_repair.max_parallel_percentage <= 100)
+    error_message = "node_auto_repair.max_parallel_percentage must be between 0 and 100."
+  }
+
+  validation {
+    condition     = var.node_auto_repair.max_unhealthy_percentage == null || (var.node_auto_repair.max_unhealthy_percentage >= 0 && var.node_auto_repair.max_unhealthy_percentage <= 100)
+    error_message = "node_auto_repair.max_unhealthy_percentage must be between 0 and 100."
+  }
+
+  validation {
+    condition     = alltrue([for override in var.node_auto_repair.overrides : contains(["Replace", "Reboot", "NoAction"], override.repair_action)])
+    error_message = "node_auto_repair.overrides repair_action must be one of Replace, Reboot, or NoAction."
+  }
+
+  validation {
+    condition     = alltrue([for override in var.node_auto_repair.overrides : override.min_repair_wait_time_mins >= 0])
+    error_message = "node_auto_repair.overrides min_repair_wait_time_mins must be at least 0."
+  }
 }
 
 variable "enabled_addons" {
