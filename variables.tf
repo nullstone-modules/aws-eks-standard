@@ -89,6 +89,70 @@ Valid values: AL2023_x86_64_STANDARD, AL2023_ARM_64_STANDARD, AL2_x86_64, AL2_AR
 EOF
 }
 
+variable "node_labels" {
+  type        = map(string)
+  default     = {}
+  description = <<EOF
+Kubernetes labels applied to every node in the managed node group.
+Use these to steer workloads with nodeSelector or node affinity.
+EOF
+}
+
+variable "node_taints" {
+  type = list(object({
+    key    = string
+    value  = optional(string)
+    effect = string
+  }))
+  default     = []
+  description = <<EOF
+Kubernetes taints applied to every node in the managed node group.
+Valid effects: NO_SCHEDULE, NO_EXECUTE, PREFER_NO_SCHEDULE.
+
+This module creates a single node group, so a taint here applies to every node in the cluster.
+Anything without a matching toleration will be unschedulable, including cluster-critical pods such as coredns and the CSI controllers.
+EOF
+
+  validation {
+    condition     = alltrue([for taint in var.node_taints : contains(["NO_SCHEDULE", "NO_EXECUTE", "PREFER_NO_SCHEDULE"], taint.effect)])
+    error_message = "node_taints effect must be one of NO_SCHEDULE, NO_EXECUTE, or PREFER_NO_SCHEDULE."
+  }
+}
+
+variable "node_max_unavailable" {
+  type        = number
+  default     = 1
+  description = <<EOF
+Number of nodes that can be unavailable at once while the managed node group rolls through an update.
+Raising this shortens Kubernetes version and AMI upgrades on larger node groups at the cost of reduced capacity during the rollout.
+EOF
+
+  validation {
+    condition     = var.node_max_unavailable >= 1
+    error_message = "node_max_unavailable must be at least 1."
+  }
+}
+
+variable "node_force_update_version" {
+  type        = bool
+  default     = false
+  description = <<EOF
+Forces node replacement during a version update even when pods cannot be drained gracefully.
+When false, a PodDisruptionBudget that never allows an eviction will stall the upgrade indefinitely.
+When true, EKS evicts those pods anyway to complete the rollout.
+EOF
+}
+
+variable "node_auto_repair_enabled" {
+  type        = bool
+  default     = true
+  description = <<EOF
+Enables EKS node auto repair for the managed node group.
+When a node is reported unhealthy for a sustained period, EKS automatically replaces it without manual intervention.
+This requires the 'eks-node-monitoring-agent' addon, which detects and reports the node conditions that trigger a repair.
+EOF
+}
+
 variable "enabled_addons" {
   type = list(string)
   default = [
