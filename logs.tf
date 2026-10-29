@@ -1,6 +1,6 @@
 module "logs" {
   source  = "nullstone-modules/logs/aws"
-  version = "~> 0.2.0"
+  version = "~> 0.3.0"
 
   name                       = local.resource_name
   tags                       = local.tags
