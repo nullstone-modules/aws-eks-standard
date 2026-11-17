@@ -30,3 +30,10 @@ The following EKS addons are installed by default with every cluster.
 ### Certificates
 
 - **cert-manager** — Installed by default via Helm (not an EKS managed addon). Issues and renews TLS certificates inside the cluster, and is the prerequisite for webhook-based operators such as the AWS Distro for OpenTelemetry (ADOT) operator used by the `aws-eks-otel-adot` module.
+
+## Private control plane
+
+Set `private_endpoint_only = true` to disable the public EKS API endpoint.
+The control plane is then reachable only through its private endpoint inside the VPC.
+HTTPS (443) is allowed from the VPC CIDR and from the Nullstone agent IPs (`data.ns_agent.ip_addresses`).
+Anything outside the VPC needs a VPN, bastion, or peering to use kubectl.
