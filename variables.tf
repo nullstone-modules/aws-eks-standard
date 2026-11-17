@@ -276,3 +276,14 @@ variable "cert_manager_chart_version" {
   default     = "v1.16.2"
   description = "The version of the cert-manager Helm chart (https://charts.jetstack.io) to install. cert-manager is required by webhook-based operators such as the ADOT operator."
 }
+
+variable "private_endpoint_only" {
+  type        = bool
+  default     = false
+  description = <<EOF
+When true, the public EKS API endpoint is disabled and the control plane is reachable only through its private endpoint inside the VPC.
+HTTPS (443) to the private endpoint is allowed from every address in the VPC CIDR and from the Nullstone agent IPs so Nullstone can keep provisioning and deploying.
+Anything else (developer laptops, CI runners) must reach the VPC through a VPN, bastion, or peering to use kubectl.
+Defaults to false, which keeps the public endpoint open.
+EOF
+}

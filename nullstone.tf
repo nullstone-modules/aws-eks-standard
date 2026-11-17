@@ -19,4 +19,6 @@ data "ns_agent" "this" {}
 
 locals {
   ns_agent_user_arn = data.ns_agent.this.aws_user_arn
+  // Accepts bare IPs or CIDRs; bare IPs become /32 blocks
+  ns_agent_cidrs = [for ip in data.ns_agent.this.ip_addresses : strcontains(ip, "/") ? ip : "${ip}/32"]
 }

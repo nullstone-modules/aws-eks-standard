@@ -29,8 +29,8 @@ resource "aws_eks_cluster" "this" {
   #bridgecrew:skip=BC_AWS_KUBERNETES_1:Cluster security group is restricted in aws_security_group.node
   #bridgecrew:skip=BC_AWS_KUBERNETES_2:Enabling Nullstone to provision/deploy into Kubernetes cluster
   vpc_config {
-    endpoint_public_access  = true
-    endpoint_private_access = false
+    endpoint_public_access  = !var.private_endpoint_only
+    endpoint_private_access = var.private_endpoint_only
     subnet_ids              = local.private_subnet_ids
     security_group_ids      = [aws_security_group.node.id]
   }
@@ -69,4 +69,28 @@ resource "aws_security_group_rule" "cluster-dns-udp-from-private-cidr" {
   from_port         = 53
   to_port           = 53
   cidr_blocks       = local.private_cidrs
+}
+
+resource "aws_security_group_rule" "cluster-https-from-vpc" {
+  count = var.private_endpoint_only ? 1 : 0
+
+  description       = "Allow HTTPS to the private API endpoint from anywhere in the VPC"
+  security_group_id = local.cluster_security_group_id
+  type              = "ingress"
+  protocol          = "tcp"
+  from_port         = 443
+  to_port           = 443
+  cidr_blocks       = [local.vpc_cidr]
+}
+
+resource "aws_security_group_rule" "cluster-https-from-nullstone" {
+  count = var.private_endpoint_only && length(local.ns_agent_cidrs) > 0 ? 1 : 0
+
+  description       = "Allow HTTPS to the private API endpoint from the Nullstone agent"
+  security_group_id = local.cluster_security_group_id
+  type              = "ingress"
+  protocol          = "tcp"
+  from_port         = 443
+  to_port           = 443
+  cidr_blocks       = local.ns_agent_cidrs
 }
