@@ -15,7 +15,7 @@ The following EKS addons are installed by default with every cluster.
 ### Storage
 
 - **EBS CSI Driver** (`aws-ebs-csi-driver`) — Enables dynamic provisioning of EBS volumes as Kubernetes persistent volumes. Required for stateful workloads that need block storage (databases, message queues, etc.).
-- **EFS CSI Driver** (`aws-efs-csi-driver`) — Enables mounting of EFS file systems as Kubernetes persistent volumes. Useful for shared storage that needs to be accessed by multiple pods simultaneously.
+- **EFS CSI Driver** (`aws-efs-csi-driver`) — Enables mounting of EFS file systems (and Amazon S3 Files) as Kubernetes persistent volumes. Useful for shared storage that needs to be accessed by multiple pods simultaneously.
 
 ### Security
 
@@ -30,6 +30,12 @@ The following EKS addons are installed by default with every cluster.
 ### Certificates
 
 - **cert-manager** — Installed by default via Helm (not an EKS managed addon). Issues and renews TLS certificates inside the cluster, and is the prerequisite for webhook-based operators such as the AWS Distro for OpenTelemetry (ADOT) operator used by the `aws-eks-otel-adot` module.
+
+## Addon IAM
+
+Addons that call AWS (`vpc-cni`, `aws-ebs-csi-driver`, `aws-efs-csi-driver`, `amazon-cloudwatch-observability`) get their IAM role through EKS Pod Identity.
+`eks-pod-identity-agent` must therefore stay in `enabled_addons`; the plan fails otherwise.
+IRSA is still wired on the same roles during the transition so running pods keep their credentials; a later release removes it.
 
 ## Private control plane
 
