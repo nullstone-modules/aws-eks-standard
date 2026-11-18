@@ -1,5 +1,22 @@
 locals {
-  enabled_addons = toset(var.enabled_addons)
+  enabled_addons             = toset(var.enabled_addons)
+  pod_identity_agent_enabled = contains(local.enabled_addons, "eks-pod-identity-agent")
+  pod_identity_agent_error   = "requires 'eks-pod-identity-agent' in enabled_addons; its IAM role is granted through EKS Pod Identity."
+}
+
+# Addon roles are assumed through EKS Pod Identity (pods.eks.amazonaws.com).
+# IRSA stays wired on the same roles for one release so running pods keep refreshing credentials;
+# Pod Identity takes precedence for any pod started after the association exists.
+data "aws_iam_policy_document" "pod_identity_assume" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRole", "sts:TagSession"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["pods.eks.amazonaws.com"]
+    }
+  }
 }
 
 # -----------------------------------------------
@@ -18,6 +35,20 @@ resource "aws_eks_addon" "pod_identity_agent" {
   }
 }
 
+# The node role keeps AmazonEKS_CNI_Policy so nodes can bootstrap before the Pod Identity agent runs.
+resource "aws_iam_role" "vpc_cni" {
+  count              = contains(local.enabled_addons, "vpc-cni") ? 1 : 0
+  name               = "${local.resource_name}-vpc-cni"
+  assume_role_policy = data.aws_iam_policy_document.pod_identity_assume.json
+  tags               = local.tags
+}
+
+resource "aws_iam_role_policy_attachment" "vpc_cni" {
+  count      = contains(local.enabled_addons, "vpc-cni") ? 1 : 0
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+  role       = aws_iam_role.vpc_cni[0].name
+}
+
 resource "aws_eks_addon" "vpc_cni" {
   count                       = contains(local.enabled_addons, "vpc-cni") ? 1 : 0
   cluster_name                = aws_eks_cluster.this.name
@@ -32,9 +63,23 @@ resource "aws_eks_addon" "vpc_cni" {
     }
   })
 
+  pod_identity_association {
+    role_arn        = aws_iam_role.vpc_cni[0].arn
+    service_account = "aws-node"
+  }
+
   timeouts {
     create = "30m"
   }
+
+  lifecycle {
+    precondition {
+      condition     = local.pod_identity_agent_enabled
+      error_message = "vpc-cni ${local.pod_identity_agent_error}"
+    }
+  }
+
+  depends_on = [aws_eks_addon.pod_identity_agent, aws_iam_role_policy_attachment.vpc_cni]
 }
 
 resource "aws_eks_addon" "kube_proxy" {
@@ -124,6 +169,8 @@ resource "aws_iam_role" "efs_csi" {
 }
 
 data "aws_iam_policy_document" "efs_csi_assume" {
+  source_policy_documents = [data.aws_iam_policy_document.pod_identity_assume.json]
+
   statement {
     effect  = "Allow"
     actions = ["sts:AssumeRoleWithWebIdentity"]
@@ -161,9 +208,28 @@ resource "aws_eks_addon" "efs_csi" {
   service_account_role_arn    = aws_iam_role.efs_csi[0].arn
   tags                        = local.tags
 
+  pod_identity_association {
+    role_arn        = aws_iam_role.efs_csi[0].arn
+    service_account = "efs-csi-controller-sa"
+  }
+
+  pod_identity_association {
+    role_arn        = aws_iam_role.efs_csi[0].arn
+    service_account = "efs-csi-node-sa"
+  }
+
   timeouts {
     create = "30m"
   }
+
+  lifecycle {
+    precondition {
+      condition     = local.pod_identity_agent_enabled
+      error_message = "aws-efs-csi-driver ${local.pod_identity_agent_error}"
+    }
+  }
+
+  depends_on = [aws_eks_addon.pod_identity_agent, aws_iam_role_policy_attachment.efs_csi]
 }
 
 # -----------------------------------------------
@@ -178,6 +244,8 @@ resource "aws_iam_role" "ebs_csi" {
 }
 
 data "aws_iam_policy_document" "ebs_csi_assume" {
+  source_policy_documents = [data.aws_iam_policy_document.pod_identity_assume.json]
+
   statement {
     effect  = "Allow"
     actions = ["sts:AssumeRoleWithWebIdentity"]
@@ -215,9 +283,23 @@ resource "aws_eks_addon" "ebs_csi" {
   service_account_role_arn    = aws_iam_role.ebs_csi[0].arn
   tags                        = local.tags
 
+  pod_identity_association {
+    role_arn        = aws_iam_role.ebs_csi[0].arn
+    service_account = "ebs-csi-controller-sa"
+  }
+
   timeouts {
     create = "30m"
   }
+
+  lifecycle {
+    precondition {
+      condition     = local.pod_identity_agent_enabled
+      error_message = "aws-ebs-csi-driver ${local.pod_identity_agent_error}"
+    }
+  }
+
+  depends_on = [aws_eks_addon.pod_identity_agent, aws_iam_role_policy_attachment.ebs_csi]
 }
 
 # -----------------------------------------------
@@ -232,6 +314,8 @@ resource "aws_iam_role" "cloudwatch_observability" {
 }
 
 data "aws_iam_policy_document" "cloudwatch_observability_assume" {
+  source_policy_documents = [data.aws_iam_policy_document.pod_identity_assume.json]
+
   statement {
     effect  = "Allow"
     actions = ["sts:AssumeRoleWithWebIdentity"]
@@ -279,7 +363,21 @@ resource "aws_eks_addon" "cloudwatch_observability" {
     }
   })
 
+  pod_identity_association {
+    role_arn        = aws_iam_role.cloudwatch_observability[0].arn
+    service_account = "cloudwatch-agent"
+  }
+
   timeouts {
     create = "30m"
   }
+
+  lifecycle {
+    precondition {
+      condition     = local.pod_identity_agent_enabled
+      error_message = "amazon-cloudwatch-observability ${local.pod_identity_agent_error}"
+    }
+  }
+
+  depends_on = [aws_eks_addon.pod_identity_agent, aws_iam_role_policy_attachment.cloudwatch_observability]
 }

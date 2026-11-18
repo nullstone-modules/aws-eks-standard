@@ -31,6 +31,12 @@ The following EKS addons are installed by default with every cluster.
 
 - **cert-manager** — Installed by default via Helm (not an EKS managed addon). Issues and renews TLS certificates inside the cluster, and is the prerequisite for webhook-based operators such as the AWS Distro for OpenTelemetry (ADOT) operator used by the `aws-eks-otel-adot` module.
 
+## Addon IAM
+
+Addons that call AWS (`vpc-cni`, `aws-ebs-csi-driver`, `aws-efs-csi-driver`, `amazon-cloudwatch-observability`) get their IAM role through EKS Pod Identity.
+`eks-pod-identity-agent` must therefore stay in `enabled_addons`; the plan fails otherwise.
+IRSA is still wired on the same roles during the transition so running pods keep their credentials; a later release removes it.
+
 ## Private control plane
 
 Set `private_endpoint_only = true` to disable the public EKS API endpoint.
