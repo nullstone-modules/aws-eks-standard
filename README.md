@@ -15,7 +15,7 @@ The following EKS addons are installed by default with every cluster.
 ### Storage
 
 - **EBS CSI Driver** (`aws-ebs-csi-driver`) — Enables dynamic provisioning of EBS volumes as Kubernetes persistent volumes. Required for stateful workloads that need block storage (databases, message queues, etc.).
-- **EFS CSI Driver** (`aws-efs-csi-driver`) — Enables mounting of EFS file systems as Kubernetes persistent volumes. Useful for shared storage that needs to be accessed by multiple pods simultaneously.
+- **EFS CSI Driver** (`aws-efs-csi-driver`) — Enables mounting of EFS file systems (and Amazon S3 Files) as Kubernetes persistent volumes. Useful for shared storage that needs to be accessed by multiple pods simultaneously.
 
 ### Security
 

@@ -200,6 +200,36 @@ resource "aws_iam_role_policy_attachment" "efs_csi" {
   role       = aws_iam_role.efs_csi[0].name
 }
 
+# S3 Files support in the EFS CSI driver (policy set recommended by the addon for the controller).
+resource "aws_iam_role_policy_attachment" "efs_csi_s3_files" {
+  for_each = contains(local.enabled_addons, "aws-efs-csi-driver") ? toset([
+    "arn:aws:iam::aws:policy/service-role/AmazonS3FilesCSIDriverPolicy",
+    "arn:aws:iam::aws:policy/AmazonS3FilesClientFullAccess",
+  ]) : toset([])
+
+  policy_arn = each.value
+  role       = aws_iam_role.efs_csi[0].name
+}
+
+# The node plugin mounts file systems; it gets a narrower role than the controller.
+resource "aws_iam_role" "efs_csi_node" {
+  count              = contains(local.enabled_addons, "aws-efs-csi-driver") ? 1 : 0
+  name               = "${local.resource_name}-efs-csi-node"
+  assume_role_policy = data.aws_iam_policy_document.pod_identity_assume.json
+  tags               = local.tags
+}
+
+resource "aws_iam_role_policy_attachment" "efs_csi_node" {
+  for_each = contains(local.enabled_addons, "aws-efs-csi-driver") ? toset([
+    "arn:aws:iam::aws:policy/AmazonElasticFileSystemsUtils",
+    "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess",
+    "arn:aws:iam::aws:policy/AmazonS3FilesClientFullAccess",
+  ]) : toset([])
+
+  policy_arn = each.value
+  role       = aws_iam_role.efs_csi_node[0].name
+}
+
 resource "aws_eks_addon" "efs_csi" {
   count                       = contains(local.enabled_addons, "aws-efs-csi-driver") ? 1 : 0
   cluster_name                = aws_eks_cluster.this.name
@@ -214,7 +244,7 @@ resource "aws_eks_addon" "efs_csi" {
   }
 
   pod_identity_association {
-    role_arn        = aws_iam_role.efs_csi[0].arn
+    role_arn        = aws_iam_role.efs_csi_node[0].arn
     service_account = "efs-csi-node-sa"
   }
 
@@ -229,7 +259,12 @@ resource "aws_eks_addon" "efs_csi" {
     }
   }
 
-  depends_on = [aws_eks_addon.pod_identity_agent, aws_iam_role_policy_attachment.efs_csi]
+  depends_on = [
+    aws_eks_addon.pod_identity_agent,
+    aws_iam_role_policy_attachment.efs_csi,
+    aws_iam_role_policy_attachment.efs_csi_s3_files,
+    aws_iam_role_policy_attachment.efs_csi_node,
+  ]
 }
 
 # -----------------------------------------------
@@ -269,10 +304,16 @@ data "aws_iam_policy_document" "ebs_csi_assume" {
   }
 }
 
+# V2 scopes mutating actions to volumes/snapshots tagged by the driver; attach before detaching V1 so the
+# controller never runs without a policy.
 resource "aws_iam_role_policy_attachment" "ebs_csi" {
   count      = contains(local.enabled_addons, "aws-ebs-csi-driver") ? 1 : 0
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEBSCSIDriverPolicyV2"
   role       = aws_iam_role.ebs_csi[0].name
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_eks_addon" "ebs_csi" {
