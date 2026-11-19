@@ -57,3 +57,11 @@ output "node_role_arn" {
   value       = aws_iam_role.node.arn
   description = "string ||| ARN of the IAM role assigned to EKS managed nodes."
 }
+
+output "private_endpoint_dns" {
+  value = {
+    domain     = lower(trimprefix(aws_eks_cluster.this.endpoint, "https://"))
+    nameserver = cidrhost(local.vpc_cidr, 2)
+  }
+  description = "map ||| Split DNS entry for reaching the private API endpoint over a VPN: resolve `domain` through `nameserver` (the VPC resolver). Enter `domain` exactly as given (lowercase)."
+}

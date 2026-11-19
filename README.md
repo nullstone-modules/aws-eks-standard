@@ -43,3 +43,4 @@ Set `private_endpoint_only = true` to restrict the public EKS API endpoint to th
 The private endpoint is enabled and HTTPS (443) to it is allowed from the VPC CIDR.
 Anything else outside the VPC needs a VPN, bastion, or peering to use kubectl.
 Plan fails if the agent reports no IPs.
+The `private_endpoint_dns` output gives the split DNS entry (domain + VPC resolver) a VPN such as Tailscale needs to resolve the endpoint to its private IPs; one entry per cluster, domain in lowercase.
