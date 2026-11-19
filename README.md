@@ -39,7 +39,7 @@ IRSA is still wired on the same roles during the transition so running pods keep
 
 ## Private control plane
 
-Set `private_endpoint_only = true` to disable the public EKS API endpoint.
-The control plane is then reachable only through its private endpoint inside the VPC.
-HTTPS (443) is allowed from the VPC CIDR and from the Nullstone agent IPs (`data.ns_agent.ip_addresses`).
-Anything outside the VPC needs a VPN, bastion, or peering to use kubectl.
+Set `private_endpoint_only = true` to restrict the public EKS API endpoint to the Nullstone agent IPs (`data.ns_agent.ip_addresses`).
+The private endpoint is enabled and HTTPS (443) to it is allowed from the VPC CIDR.
+Anything else outside the VPC needs a VPN, bastion, or peering to use kubectl.
+Plan fails if the agent reports no IPs.

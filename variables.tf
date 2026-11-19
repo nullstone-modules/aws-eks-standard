@@ -281,9 +281,9 @@ variable "private_endpoint_only" {
   type        = bool
   default     = false
   description = <<EOF
-When true, the public EKS API endpoint is disabled and the control plane is reachable only through its private endpoint inside the VPC.
-HTTPS (443) to the private endpoint is allowed from every address in the VPC CIDR and from the Nullstone agent IPs so Nullstone can keep provisioning and deploying.
+When true, the public EKS API endpoint only accepts traffic from the Nullstone agent IPs (data.ns_agent.ip_addresses) so Nullstone can keep provisioning and deploying.
+The private endpoint is enabled and HTTPS (443) to it is allowed from every address in the VPC CIDR.
 Anything else (developer laptops, CI runners) must reach the VPC through a VPN, bastion, or peering to use kubectl.
-Defaults to false, which keeps the public endpoint open.
+Plan fails if the agent reports no IPs. Defaults to false, which leaves the public endpoint open to 0.0.0.0/0.
 EOF
 }
